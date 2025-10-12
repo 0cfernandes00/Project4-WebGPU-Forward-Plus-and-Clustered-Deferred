@@ -14,3 +14,4 @@
 //     Add the calculated contribution to the total light accumulation.
 // Multiply the fragment’s diffuse color by the accumulated light contribution.
 // Return the final color, ensuring that the alpha component is set appropriately (typically to 1).
+
