@@ -26,57 +26,89 @@
 @group(0) @binding(1) var<storage, read_write> lightSet: LightSet;
 @group(0) @binding(2) var<uniform> invViewProj: mat4x4f;
 @group(0) @binding(3) var<uniform> screenDimensions: vec2f;
+@group(0) @binding(4) var<uniform> viewMatrix: mat4x4f;
 
 
 @compute
 @workgroup_size(1, 1, 1) 
-fn main(@builtin(global_invocation_id) globalID: vec3u) {
+fn main(@builtin(global_invocation_id) gid: vec3u) {
+let xCount: u32 = 16u;
+    let yCount: u32 = 9u;
+    let zCount: u32 = 24u;
+    let clusterCount: u32 = xCount * yCount * zCount;
 
-	let zNear: f32 = 0.1;
-	let zFar: f32 = 1000.0;
+    let tx = gid.x;
+    let ty = gid.y;
+    let tz = gid.z;
 
-	let xCount: u32 = 16u;
-	let yCount: u32 = 9u;
-	let zCount: u32 = 24u;
+    // ensure we are in range
+    if (tx >= xCount || ty >= yCount || tz >= zCount) { return; }
 
-	if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0) {
-		clusterSet.numClusters = xCount * yCount * zCount;
-	}
-	
-	let eyePos: vec3f = vec3f(0.0);
-	let tileSizePx: f32 = screenDimensions.x / f32(xCount);
-	let tileIndex : u32 = u32(globalID.x +
-				globalID.y * xCount + 
-				globalID.z * (xCount * yCount));
+    let clusterIdx = tx + ty * xCount + tz * (xCount * yCount);
 
-	
-	let minPixelX: f32 = f32(globalID.x) * tileSizePx;
-	let maxPixelX: f32 = f32(globalID.x + 1u) * tileSizePx;
-	let minPixelY: f32 = f32(globalID.y) * tileSizePx;
-	let maxPixelY: f32 = f32(globalID.y + 1u) * tileSizePx;
+    // compute tile extents in pixels
+    let tileW: f32 = screenDimensions.x / f32(xCount);
+    let tileH: f32 = screenDimensions.y / f32(yCount);
 
-	let minPoint_sS: vec4f = vec4f(minPixelX, minPixelY, -1.0, 1.0);
-	let maxPoint_sS: vec4f = vec4f(maxPixelX, maxPixelY, -1.0, 1.0);
+    let minPixelX = f32(tx) * tileW;
+    let maxPixelX = f32(tx + 1u) * tileW;
+    let minPixelY = f32(ty) * tileH;
+    let maxPixelY = f32(ty + 1u) * tileH;
 
-	var maxPoint_vS: vec3f;
-	var minPoint_vS: vec3f; 
-	maxPoint_vS = screenToViewSpace(maxPoint_sS).xyz;
-	minPoint_vS = screenToViewSpace(minPoint_sS).xyz;
+    // sample pixel centers (add 0.5) to avoid boundary issues
+    let px0 = minPixelX + 0.5;
+    let px1 = maxPixelX - 0.5;
+    let py0 = minPixelY + 0.5;
+    let py1 = maxPixelY - 0.5;
 
-	let tileNear: f32 = -zNear * pow(zFar/zNear, f32(globalID.z) / f32(globalID.z));
-	let tileFar: f32 = -zNear * pow(zFar/zNear, f32(globalID.z + 1u) / f32(globalID.z));
+    // compute the 8 frustum corners for this tile in view space
+    let c000 = screenPixelToView(px0, py0, 0.0); // near
+    let c100 = screenPixelToView(px1, py0, 0.0);
+    let c010 = screenPixelToView(px0, py1, 0.0);
+    let c110 = screenPixelToView(px1, py1, 0.0);
 
-	let minPointNear: vec3f = lineInterp(eyePos, minPoint_vS, tileNear);
-	let minPointFar: vec3f = lineInterp(eyePos, minPoint_vS, tileFar); 
-	let maxPointNear: vec3f = lineInterp(eyePos, maxPoint_vS, tileNear);
-	let maxPointFar: vec3f = lineInterp(eyePos, maxPoint_vS, tileFar);
+    let c001 = screenPixelToView(px0, py0, 1.0); // far
+    let c101 = screenPixelToView(px1, py0, 1.0);
+    let c011 = screenPixelToView(px0, py1, 1.0);
+    let c111 = screenPixelToView(px1, py1, 1.0);
 
-	let minPointAABB: vec3f = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
-	let maxPointAABB: vec3f = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
+    var minP = min(min(min(c000, c100), min(c010, c110)), min(min(c001, c101), min(c011, c111)));
+    var maxP = max(max(max(c000, c100), max(c010, c110)), max(max(c001, c101), max(c011, c111)));
 
-	clusterSet.clusters[tileIndex].minPoint = vec4f(minPointAABB, 0.0f);
-	clusterSet.clusters[tileIndex].maxPoint = vec4f(maxPointAABB, 0.0);
+    // store the AABB in view-space into the cluster buffer
+    clusterSet.clusters[clusterIdx].minPoint = vec4f(minP, 1.0);
+    clusterSet.clusters[clusterIdx].maxPoint = vec4f(maxP, 1.0);
 
+    // reset numLights
+    //clusterSet.clusters[clusterIdx].numLights = 0u;
+
+    // assign lights: transform light into view-space before testing
+    let maxLightsPerCluster: u32 = 24u;
+    var assigned: u32 = 0u;
+
+    // optional: early-out if no lights
+    let nLights = lightSet.numLights;
+    for (var li: u32 = 0u; li < nLights; li = li + 1u) {
+        if (assigned >= maxLightsPerCluster) { break; }
+        let lightWorld = lightSet.lights[li].pos;
+        let lightRadius = ${lightRadius}; // injected constant
+        // transform light position to view space once
+        let lightView = (viewMatrix * vec4f(lightWorld, 1.0)).xyz;
+
+        //if (aabbIntersect(lightView, f32(lightRadius), minP, maxP)) {
+            clusterSet.clusters[clusterIdx].lightIndices[assigned] = li;
+            assigned = assigned + 1u;
+        //}
+    }
+
+    clusterSet.clusters[clusterIdx].numLights = assigned;
+
+    // optionally set clusterSet.numClusters once
+    if (clusterIdx == 0u) {
+        clusterSet.numClusters = clusterCount;
+    }
+
+    return;
 }
 
 fn lineInterp(eye: vec3f, endPoint: vec3f, tileDist:f32) -> vec3f {
@@ -94,8 +126,6 @@ fn lineInterp(eye: vec3f, endPoint: vec3f, tileDist:f32) -> vec3f {
 }
 
 fn clipToView(screenPos: vec4f) -> vec4f {
-	// update so it's not recalculated every time
-	//let invViewProj: mat4x4f = camera.viewProjInverse;
 
 	let viewPos: vec4f = invViewProj * screenPos;
 
@@ -103,10 +133,23 @@ fn clipToView(screenPos: vec4f) -> vec4f {
 	return viewPos / viewPos.w;
 }
 
-fn screenToViewSpace(screenPos: vec4f) -> vec4f {
-	let texCoord: vec2f = screenPos.xy / screenDimensions.xy;
+fn screenPixelToView(px: f32, py: f32, clipZ: f32) -> vec3f {
+    // px,py in pixel coords [0..screenDimensions]
+    let ndcX = (px / screenDimensions.x) * 2.0 - 1.0;
+    // flip Y from pixel coords (top-left) to NDC (usually -1 bottom -> +1 top)
+    let ndcY = 1.0 - (py / screenDimensions.y) * 2.0;
+    // WebGPU clip z is 0..1. Convert to clip space z in -1..1 if invViewProj expects that.
+    let clipZ01 = clipZ; // 0.0 near, 1.0 far
+    let clipZneg1to1 = clipZ01 * 2.0 - 1.0;
+    let clip = vec4f(ndcX, ndcY, clipZneg1to1, 1.0);
+    return (clipToView(clip)).xyz;
+}
 
-	let clip: vec4f = vec4f(vec2f(texCoord.x, texCoord.y)*2.0 - 1.0, screenPos.z, screenPos.w);
+fn aabbIntersect(center: vec3f, radius: f32, aabbMin: vec3f, aabbMax: vec3f) -> bool {
+    let clampedCenter = clamp(center, aabbMin, aabbMax);
 
-	return clipToView(clip);
+    //let dist = length(clampedCenter - center);
+	let dist2 = dot(center - clampedCenter, center - clampedCenter);
+
+    return dist2 <= radius * radius;
 }

@@ -25,13 +25,21 @@
 
 struct FragmentInput
 {
+    @builtin(position) fragCoord: vec4f,
     @location(0) pos: vec3f,
     @location(1) nor: vec3f,
     @location(2) uv: vec2f
+    
 }
 
 @fragment
 fn main(in: FragmentInput) -> @location(0) vec4f {
+
+    if (clusterSet.numClusters == 3456u) {
+        //return vec4(0.0,1.0,0.0,1.0);
+    }
+    //return vec4(1.0,0.0,0.0,1.0);
+
     let diffuseColor = textureSample(diffuseTex, diffuseTexSampler, in.uv);
     var totalLightContrib: vec3f = vec3f(0.0, 0.0, 0.0);
 
@@ -48,25 +56,40 @@ fn main(in: FragmentInput) -> @location(0) vec4f {
     zSlice = (in.pos.z - camera.zVector.x) / (camera.zVector.y - camera.zVector.x);
     zSlice = log2(zSlice * scale + 1.0) * invLog2Scale;
     zSlice = clamp(zSlice, 0.0, f32(zCount - 1u));
+
+    // Transform world position to view space
+    let viewPos = (camera.viewMat * vec4f(in.pos, 1.0)).xyz;
     
-    let clusterIdx = u32(clamp(in.pos.x / tileWidth, 0.0, f32(xCount - 1))) 
-                    + u32(clamp(in.pos.y / tileHeight, 0.0, f32(yCount - 1))) * xCount 
+    let clusterIdx = u32(clamp(in.fragCoord.x / tileWidth, 0.0, f32(xCount - 1))) 
+                    + u32(clamp(in.fragCoord.y / tileHeight, 0.0, f32(yCount - 1))) * xCount 
                     + u32(zSlice) * xCount * yCount;
  
     let cluster = clusterSet.clusters[clusterIdx];
-    if (in.pos.x >= cluster.minPoint.x && in.pos.x <= cluster.maxPoint.x &&
-        in.pos.y >= cluster.minPoint.y && in.pos.y <= cluster.maxPoint.y &&
-        in.pos.z >= cluster.minPoint.z && in.pos.z <= cluster.maxPoint.z) {
 
-        let numLightsInCluster: u32 = cluster.numLights;
-        for (var i = 0u; i < numLightsInCluster; i++) {
-            let globalLightIndex = cluster.lightIndices[i];
-            let light = lightSet.lights[globalLightIndex];
-            totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
-        }
+
+    let cx = f32(clusterIdx % 16u) / 15.0;
+    let cy = f32((clusterIdx / 16u) % 9u) / 8.0;
+    let cz = f32(clusterIdx / (16u * 9u)) / 23.0; // zCount-1 = 23
+    //return vec4f(cx, cy, cz, 1.0);
+
+
+    let nl = f32(cluster.numLights) / 24.0;
+    //return vec4f(nl, nl, nl, 1.0);
+
+
+    let f = f32(cluster.lightIndices[0]) / f32(max(1u, lightSet.numLights));
+    // return vec4(f, 0, 1-f, 1);
+
+    
+    let numLightsInCluster: u32 = cluster.numLights;
+    for (var i = 0u; i < numLightsInCluster; i++) {
+        let globalLightIndex = cluster.lightIndices[i];
+        let light = lightSet.lights[globalLightIndex];
+                
+        totalLightContrib += calculateLightContrib(light, in.pos, normalize(in.nor));
     }
-   
 
     let finalColor = diffuseColor.rgb * totalLightContrib;
     return vec4f(finalColor, 1.0);
+    
 }

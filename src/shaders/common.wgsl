@@ -11,13 +11,12 @@ struct LightSet {
 }
 
 // TODO-2: you may want to create a ClusterSet struct similar to LightSet
-
-struct VolumeAABB{
-	minPoint: vec4f,
-	maxPoint: vec4f,
-    numLights: u32,
-    lights: array<Light, 24>,
-    lightIndices: array< u32, 24>
+struct VolumeAABB {
+    minPoint: vec4f,              // 16 bytes
+    maxPoint: vec4f,             // 16 bytes
+    numLights: u32,              // 4 bytes
+    _pad: vec3<u32>,              // 12 bytes padding -> makes the 3rd 16-byte slot
+    lightIndices: array<u32, 500> // 400 bytes
 };
 
 struct ClusterSet {
@@ -29,13 +28,15 @@ struct CameraUniforms {
     // TODO-1.3: add an entry for the view proj mat (of type mat4x4f)
     viewProj: mat4x4f,
     viewProjInverse: mat4x4f,
-    zVector: vec3f
+    zVector: vec3f,
+    viewMat: mat4x4f
 }
 
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius
 fn rangeAttenuation(distance: f32) -> f32 {
     return clamp(1.f - pow(distance / ${lightRadius}, 4.f), 0.f, 1.f) / (distance * distance);
 }
+
 
 fn calculateLightContrib(light: Light, posWorld: vec3f, nor: vec3f) -> vec3f {
     let vecToLight = light.pos - posWorld;
@@ -44,3 +45,4 @@ fn calculateLightContrib(light: Light, posWorld: vec3f, nor: vec3f) -> vec3f {
     let lambert = max(dot(nor, normalize(vecToLight)), 0.f);
     return light.color * lambert * rangeAttenuation(distToLight);
 }
+

@@ -54,12 +54,17 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 }
             ]
         });
-
+        const bytesPerCluster = 512; 
+        const clusterCount = 16 * 9 * 24;
         this.clusterBuffer = renderer.device.createBuffer({
             label: "cluster buffer",
-            size: 16 * 9 * 24 * 32,
+            size: clusterCount * bytesPerCluster,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
         });
+
+        // after creating clusterBuffer
+        const zero = new Uint8Array(clusterCount * bytesPerCluster);
+        renderer.device.queue.writeBuffer(this.clusterBuffer, 0, zero);
 
 
         this.sceneUniformsBindGroup = renderer.device.createBindGroup({
@@ -145,13 +150,18 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "storage" }
                 },
-                { // camera view matrix
+                { // inverse view proj matrix
                     binding: 2,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 },
                 { // canvas resolution
                     binding: 3,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: { type: "uniform" }
+                },
+                { // camera view matrix
+                    binding: 4,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: { type: "uniform" }
                 }
@@ -186,11 +196,15 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 },
                 {
                     binding: 2,
-                    resource: { buffer: this.camera.viewMatrixBuffer }
+                    resource: { buffer: this.camera.invViewProjBuffer }
                 },
                 {
                     binding: 3,
                     resource: { buffer: this.resolutionUniformBuffer }
+                },
+                {
+                    binding: 4,
+                    resource: {buffer: this.camera.viewMatrixBuffer}
                 }
             ]
         });
