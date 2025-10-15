@@ -14,7 +14,10 @@ struct LightSet {
 
 struct VolumeAABB{
 	minPoint: vec4f,
-	maxPoint: vec4f
+	maxPoint: vec4f,
+    numLights: u32,
+    lights: array<Light, 24>,
+    lightIndices: array< u32, 24>
 };
 
 struct ClusterSet {
@@ -25,7 +28,8 @@ struct ClusterSet {
 struct CameraUniforms {
     // TODO-1.3: add an entry for the view proj mat (of type mat4x4f)
     viewProj: mat4x4f,
-    //viewProjInverse: mat4x4f
+    viewProjInverse: mat4x4f,
+    zVector: vec3f
 }
 
 // CHECKITOUT: this special attenuation function ensures lights don't affect geometry outside the maximum light radius

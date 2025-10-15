@@ -1,9 +1,9 @@
-import { Mat4, mat4, Vec3, vec3 } from "wgpu-matrix";
+import { Mat4, mat4, Vec2, Vec3, vec3 } from "wgpu-matrix";
 import { toRadians } from "../math_util";
 import { device, canvas, fovYDegrees, aspectRatio } from "../renderer";
 
 class CameraUniforms {
-    readonly buffer = new ArrayBuffer(16 * 4);
+    readonly buffer = new ArrayBuffer(32 * 8);
     private readonly floatView = new Float32Array(this.buffer);
 
     set viewProjMat(mat: Float32Array) {
@@ -16,21 +16,20 @@ class CameraUniforms {
     }
 
     // TODO-2: add extra functions to set values needed for light clustering here
-    //readonly bufferInv = new ArrayBuffer(32 * 4);
-    //private readonly floatViewInv = new Float32Array(this.bufferInv);
 
-    //set viewProjMatInverse(mat: Float32Array) {
-    //    for (let i: number = 0; i < 16; ++i) {
-    //        this.floatViewInv[i] = mat[i];
-    //    }
-    //}
+
+    set viewProjMatInverse(mat: Float32Array) {
+        for (let i: number = 0; i < 16; ++i) {
+            this.floatView[i+16] = mat[i];
+        }
+    }
 }
 
 export class Camera {
     uniforms: CameraUniforms = new CameraUniforms();
     uniformsBuffer: GPUBuffer;
     viewMatrixBuffer: GPUBuffer;
-
+    
     projMat: Mat4 = mat4.create();
     projMatInverse: Mat4 = mat4.create();
     cameraPos: Vec3 = vec3.create(-7, 2, 0);
@@ -41,6 +40,7 @@ export class Camera {
     pitch: number = 0;
     moveSpeed: number = 0.004;
     sensitivity: number = 0.15;
+    zVector: Vec3 = vec3.create(0.1, 100.0, 0.0);
 
     static readonly nearPlane = 0.1;
     static readonly farPlane = 1000;
@@ -61,13 +61,13 @@ export class Camera {
         });
 
         this.viewMatrixBuffer = device.createBuffer({
-            label: "view matrix",
-            size: 32 * 4,
+            label: "inverse view proj matrix",
+            size: 144,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
         this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
-        this.projMatInverse = mat4.inverse(this.projMat);
+        //this.projMatInverse = mat4.inverse(this.projMat);
 
         this.rotateCamera(0, 0); // set initial camera vectors
 
@@ -160,11 +160,14 @@ export class Camera {
         this.uniforms.viewProjMat = viewProjMat;
 
         // TODO-2: write to extra buffers needed for light clustering here
-        //this.uniforms.viewProjMatInverse = mat4.inverse(viewProjMat);
+        this.projMatInverse = mat4.inverse(this.projMat);
+        const viewProjMatInverse = mat4.inverse(viewProjMat);
+        this.uniforms.viewProjMatInverse = viewProjMatInverse;
 
         // TODO-1.1: upload `this.uniforms.buffer` (host side) to `this.uniformsBuffer` (device side)
         // check `lights.ts` for examples of using `device.queue.writeBuffer()`
 
         device.queue.writeBuffer(this.uniformsBuffer, 0, this.uniforms.buffer);
+        device.queue.writeBuffer(this.viewMatrixBuffer, 0, viewProjMatInverse);
     }
 }
