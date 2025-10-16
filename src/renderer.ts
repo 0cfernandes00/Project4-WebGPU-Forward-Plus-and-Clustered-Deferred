@@ -105,7 +105,6 @@ export abstract class Renderer {
     protected scene: Scene;
     protected lights: Lights;
     protected camera: Camera;
-    resolutionUniformBuffer: GPUBuffer;
 
     protected stats: Stats;
 
@@ -119,13 +118,6 @@ export abstract class Renderer {
         this.stats = stage.stats;
 
         this.frameRequestId = requestAnimationFrame((t) => this.onFrame(t));
-
-        this.resolutionUniformBuffer = device.createBuffer({
-            label: "resolution uniform buffer",
-            size: 2 * 4,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-        });
-
     }
 
     stop(): void {
@@ -143,9 +135,6 @@ export abstract class Renderer {
         let deltaTime = time - this.prevTime;
         this.camera.onFrame(deltaTime);
         this.lights.onFrame(time);
-
-        const resolutionData = new Float32Array([canvas.width, canvas.height]);
-        device.queue.writeBuffer(this.resolutionUniformBuffer, 0, resolutionData);
 
         this.stats.begin();
 

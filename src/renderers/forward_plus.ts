@@ -13,12 +13,6 @@ export class ForwardPlusRenderer extends renderer.Renderer {
     depthTextureView: GPUTextureView;
 
     pipeline: GPURenderPipeline;
-
-    clusteringComputePipeline: GPUComputePipeline;
-    clusteringBindGroupLayout: GPUBindGroupLayout;
-    clusteringBindGroup: GPUBindGroup;
-
-    clusterBuffer: GPUBuffer;
     constructor(stage: Stage) {
         super(stage);
 
@@ -29,43 +23,21 @@ export class ForwardPlusRenderer extends renderer.Renderer {
             entries: [
                 { // camera
                     binding: 0,
-                    visibility: GPUShaderStage.VERTEX,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                     buffer: { type: "uniform" }
                 },
                 { // lightSet
                     binding: 1,
                     visibility: GPUShaderStage.FRAGMENT,
-                    buffer: { type: "storage" }
-                },
-                { // camera view matrix
-                    binding: 2,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    buffer: { type: "uniform" }
-                },
-                { // canvas resolution
-                    binding: 3,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    buffer: { type: "uniform" }
+                    buffer: { type: "read-only-storage" }
                 },
                 { // clusterBuffer
-                    binding: 4,
+                    binding: 2,
                     visibility: GPUShaderStage.FRAGMENT,
                     buffer: { type: "read-only-storage" }
                 }
             ]
         });
-        const bytesPerCluster = 512; 
-        const clusterCount = 16 * 9 * 24;
-        this.clusterBuffer = renderer.device.createBuffer({
-            label: "cluster buffer",
-            size: clusterCount * bytesPerCluster,
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
-
-        // after creating clusterBuffer
-        const zero = new Uint8Array(clusterCount * bytesPerCluster);
-        renderer.device.queue.writeBuffer(this.clusterBuffer, 0, zero);
-
 
         this.sceneUniformsBindGroup = renderer.device.createBindGroup({
             label: "scene uniforms bind group",
@@ -81,15 +53,7 @@ export class ForwardPlusRenderer extends renderer.Renderer {
                 },
                 {
                     binding: 2,
-                    resource: { buffer: this.camera.viewMatrixBuffer }
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: this.resolutionUniformBuffer }
-                },
-                {
-                    binding: 4,
-                    resource: { buffer: this.clusterBuffer }
+                    resource: { buffer: this.lights.clusterBuffer }
                 }
             ]
         });
@@ -135,80 +99,6 @@ export class ForwardPlusRenderer extends renderer.Renderer {
             }
         });
 
-
-
-        this.clusteringBindGroupLayout = renderer.device.createBindGroupLayout({
-            label: "clustering bind group layout",
-            entries: [
-                { // clusterBuffer
-                    binding: 0,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                { // lightSet
-                    binding: 1,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "storage" }
-                },
-                { // inverse view proj matrix
-                    binding: 2,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "uniform" }
-                },
-                { // canvas resolution
-                    binding: 3,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "uniform" }
-                },
-                { // camera view matrix
-                    binding: 4,
-                    visibility: GPUShaderStage.COMPUTE,
-                    buffer: { type: "uniform" }
-                }
-            ]
-        });
-
-        this.clusteringComputePipeline = renderer.device.createComputePipeline({
-            layout: renderer.device.createPipelineLayout({
-                label: "clustering compute pipeline layout",
-                bindGroupLayouts: [this.clusteringBindGroupLayout]
-            }),
-            compute: {
-                module: renderer.device.createShaderModule({
-                    label: "clustering compute shader",
-                    code: shaders.clusteringComputeSrc
-                }),
-                entryPoint: "main"
-            }
-        });
-
-        this.clusteringBindGroup = renderer.device.createBindGroup({
-            label: "clustering bind group",
-            layout: this.clusteringBindGroupLayout,
-            entries: [
-                {
-                    binding: 0,
-                    resource: { buffer: this.clusterBuffer }
-                },
-                {
-                    binding: 1,
-                    resource: { buffer: this.lights.lightSetStorageBuffer }
-                },
-                {
-                    binding: 2,
-                    resource: { buffer: this.camera.invViewProjBuffer }
-                },
-                {
-                    binding: 3,
-                    resource: { buffer: this.resolutionUniformBuffer }
-                },
-                {
-                    binding: 4,
-                    resource: {buffer: this.camera.viewMatrixBuffer}
-                }
-            ]
-        });
-
     }
 
     override draw() {
@@ -217,16 +107,10 @@ export class ForwardPlusRenderer extends renderer.Renderer {
         // - run the main rendering pass, using the computed clusters for efficient lighting
 
         const encoder = renderer.device.createCommandEncoder();
+
+        this.lights.doLightClustering(encoder);
+
         const canvasTextureView = renderer.context.getCurrentTexture().createView();
-
-        const computePass = encoder.beginComputePass({
-            label: "clustering compute pass",
-        });
-        computePass.setPipeline(this.clusteringComputePipeline);
-        computePass.setBindGroup(0, this.clusteringBindGroup);
-
-        computePass.dispatchWorkgroups(16, 9, 24);
-        computePass.end();
 
         const renderPass = encoder.beginRenderPass({
             label: "forward+ render pass",
