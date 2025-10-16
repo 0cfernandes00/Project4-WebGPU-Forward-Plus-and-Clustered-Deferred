@@ -77,9 +77,9 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
     for (var i : u32 = 0; i < (*lightSetPtr).numLights; i++)
     {
         let currentLight = (*lightSetPtr).lights[i];
-        if (intersectLightClusterAABB(currentLight.pos, f32(${lightRadius}), minPoint.xyz, maxPoint.xyz))
+        if (intersectLightClusterAABB(currentLight.pos, 2.0, minPoint.xyz, maxPoint.xyz))
         {
-            if (count < ${maxLightsPerCluster}) {
+            if (count < 100) {
                 (*currentCluster).lightIndices[count] = i;
                 count = count + 1u;
             }
@@ -90,7 +90,7 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
 
     }
     (*currentCluster).numLights = count;
-    //(*currentCluster).numLights = min(count, ${maxLightsPerCluster});
+    //(*currentCluster).numLights = min(count, 100);
 
     return;
 
@@ -153,7 +153,7 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
     //clusterSet.clusters[clusterIdx].numLights = 0u;
 
     // assign lights: transform light into view-space before testing
-    let maxLightsPerCluster: u32 = ${maxLightsPerCluster};
+    let maxLightsPerCluster: u32 = 100;
     var assigned: u32 = 0u;
 
     let nLights = lightSet.numLights;
@@ -161,7 +161,7 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
     for (var li: u32 = 0u; li < nLights; li = li + 1u) {
         if (assigned >= maxLightsPerCluster) { break; }
         let lightWorld = lightSet.lights[li].pos;
-        let lightRadius = ${lightRadius}; // injected constant
+        let lightRadius = 2.0; // injected constant
 
         if (aabbIntersect(lightWorld, f32(lightRadius), minP, maxP)) {
             clusterSet.clusters[clusterIdx].lightIndices[assigned] = li;
