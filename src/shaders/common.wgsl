@@ -15,7 +15,7 @@ struct VolumeAABB {
     minPoint: vec4f,              // 16 bytes
     maxPoint: vec4f,             // 16 bytes
     numLights: u32,     // 4 bytes
-    lightIndices: array<u32, ${maxLightsPerCluster}> // 400 bytes
+    lightIndices: array<u32, 100> // 400 bytes
 };
 
 struct ClusterSet {
