@@ -7,7 +7,7 @@
 
 
 @compute
-@workgroup_size(8,8,4) 
+@workgroup_size(4,4,4) 
 fn main(@builtin(global_invocation_id) globalId: vec3u) {
 
     let xCount: u32 = 16u;
@@ -22,8 +22,10 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
         return;
     }
 
+    
 
     let currentCluster = &clusterSet.clusters[clusterIdx];
+    currentCluster.numLights = 0u;
 
     //- Calculate the screen-space bounds for this cluster in 2D (XY).
 
@@ -67,7 +69,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
 
     var count : u32 = 0;
     let lightSetPtr = &(lightSet);
-    let maxLightsPerCluster = 100u;
+    let maxLightsPerCluster = 500u;
 
     for (var i : u32 = 0; i < (*lightSetPtr).numLights; i++)
     {
@@ -76,18 +78,19 @@ fn main(@builtin(global_invocation_id) globalId: vec3u) {
 
         if (aabbIntersect(viewPos, 2.0, minPoint.xyz, maxPoint.xyz))
         {
-            if (count < maxLightsPerCluster) {
-                (*currentCluster).lightIndices[count] = i;
-                count = count + 1u;
-            }
-            else {
+            if (count > maxLightsPerCluster) {
                 break;
-            }
+            }    
+            (*currentCluster).lightIndices[count] = i;
+            count = count + 1u;
         }
 
     }
+    //(*currentCluster).numLights = clamp(count, 0u, maxLightsPerCluster);
     (*currentCluster).numLights = count;
 
+
+ 
     return;
 
 }

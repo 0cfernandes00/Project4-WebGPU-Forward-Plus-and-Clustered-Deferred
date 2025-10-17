@@ -72,25 +72,6 @@ export class Camera {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
 
-        this.viewMatrixBuffer = device.createBuffer({
-            label: "camera view matrix",
-            size: 256,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-        });
-
-        this.invViewProjBuffer = device.createBuffer({
-            label: "inverse view proj matrix",
-            size: 144,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-        });
-
-        this.resolutionUniformBuffer = device.createBuffer({
-            label: "resolution uniform buffer",
-            size: 2 * 4,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-        });
-
-
         this.projMat = mat4.perspective(toRadians(fovYDegrees), aspectRatio, Camera.nearPlane, Camera.farPlane);
         //this.projMatInverse = mat4.inverse(this.projMat);
 

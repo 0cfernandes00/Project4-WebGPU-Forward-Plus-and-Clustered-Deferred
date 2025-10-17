@@ -51,7 +51,6 @@ fn main(in: FragmentInput) -> @location(0) vec4f {
 
     // calculate cluster index
     let clusterIdx : u32 = clusterX + clusterY * clusterDim.x + clusterZ * clusterDim.x * clusterDim.y; 
- 
    
     let cluster = clusterSet.clusters[clusterIdx];
     let numLightsInCluster: u32 = cluster.numLights;
