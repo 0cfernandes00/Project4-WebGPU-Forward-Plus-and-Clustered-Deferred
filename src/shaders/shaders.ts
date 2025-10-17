@@ -33,7 +33,7 @@ export const constants = {
     lightRadius: 2,
     maxLightsPerCluster: 100,
     clusterWorkGroup: [8,8,4],
-    clusterScale: [16, 9, 16]
+    clusterScale: [16, 9, 24]
 };
 
 // =================================

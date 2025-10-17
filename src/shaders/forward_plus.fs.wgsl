@@ -37,36 +37,6 @@ fn main(in: FragmentInput) -> @location(0) vec4f {
     
     let diffuseColor = textureSample(diffuseTex, diffuseTexSampler, in.uv);
     var totalLightContrib: vec3f = vec3f(0.0, 0.0, 0.0);
-
-    /*
-    let xCount: u32 = 16u;
-	let yCount: u32 = 9u;
-	let zCount: u32 = 24u;
-
-    let tileWidth = camera.screenDimensions.x / f32(xCount);
-    let tileHeight = camera.screenDimensions.y / f32(yCount);
-
-
-    let viewPos = (camera.viewMatrix * vec4f(in.pos, 1.0)).xyz;
-    let zNear = camera.zVector.x;
-    let zFar = camera.zVector.y;
-
-    let viewDepth = -viewPos.z; 
-    let depthClamped = clamp(viewDepth, zNear, zFar);
-
-    // normalized log position inside [0,1]
-    let logDepth = log(depthClamped / zNear) / log(zFar / zNear);
-   
-    let zSliceF = clamp(logDepth * f32(zCount), 0.0, f32(zCount - 1u));
-
-    let zSlice = u32(floor(zSliceF + 0.00001));
-
-    
-    let clusterIdx = u32(clamp(in.fragCoord.x / tileWidth, 0.0, f32(xCount - 1))) 
-                    + u32(clamp(in.fragCoord.y / tileHeight, 0.0, f32(yCount - 1))) * xCount 
-                    + u32(zSlice) * xCount * yCount;
-    */
-    
     
     let zNear = camera.zVector.x;
     let zFar = camera.zVector.y;
@@ -78,14 +48,16 @@ fn main(in: FragmentInput) -> @location(0) vec4f {
 
     let clusterDim: vec3<u32> = vec3<u32>(xCount, yCount, zCount);
     let VSPos : vec4<f32> = camera.viewMatrix * vec4<f32>(in.pos, 1.0);
+
+    // calulate cluster z index using log scheme
     let clusterZ : u32 = u32((log(abs(VSPos.z) / zNear) * f32(clusterDim.z)) / log(zFar / zNear));
     let CSPos : vec4<f32> = camera.viewProj * vec4<f32>(in.pos, 1.0);
     let NDCPos : vec3<f32> = (CSPos.xyz / CSPos.w) * 0.5 + 0.5;
     let clusterX : u32 = u32(NDCPos.x * f32(clusterDim.x));
     let clusterY : u32 = u32(NDCPos.y * f32(clusterDim.y));
-    let clusterIdx : u32 = clusterX + clusterY * clusterDim.x + clusterZ * clusterDim.x * clusterDim.y;
 
-    
+    // calculate cluster index
+    let clusterIdx : u32 = clusterX + clusterY * clusterDim.x + clusterZ * clusterDim.x * clusterDim.y; 
  
     let cluster = clusterSet.clusters[clusterIdx];
     
