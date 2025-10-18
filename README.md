@@ -13,7 +13,8 @@ WebGL Forward+ and Clustered Deferred Shading
 
 ### Demo Video/GIF
 
-[![](img/video.mp4)]
+[](https://vimeo.com/1128505371?share=copy&fl=sv&fe=ci)
+
 
 ### (Overview)
 This project introduced me to WebGPU and the concepts of clustered deferred rendering. I implemented three versions including naive, forward +, and deferred shading.
