@@ -35,17 +35,18 @@ The Naive version takes in the model's vertex data and loops over all of the lig
 
 ### Forward+
 
-Forward+ is an improvement to traditional forward rendering, which I have implemented by partitioning the scene into clusters. The clustering shader calculates the clusters and assigns lights to each, and the fragment shader determines the cluster and calculates the light based on the specific cluster's lights. This method for rendering has become more popular as it allows optimization to come from pre-processing while still benefiting from a forward pipeline.
+Forward+ is an improvement to traditional forward rendering, which I have implemented by partitioning the scene into clusters. The clustering shader calculates the clusters and assigns lights to each, and the fragment shader determines the cluster and calculates the light based on the specific cluster's lights. This method for rendering has become more popular as it allows optimization to come from pre-processing while still benefiting from a forward pipeline. A further optimization could be computing a depth pre-pass.
 
 <img src="img/cluster.png" width="300">
 
 ### Deferred
 
-For this implementation, I leveraged the clustering computer shader again. The main workflow is separated into two passes: a geometry pass and a lighting pass. The first writes position, albedo, and normal data to G-buffers. The second pass is responsible for collecting the lights data for the specific cluster and computing the lighting with the G-buffer information.
+For this implementation, I leveraged the clustering compute shader again. The main workflow is separated into two passes: a geometry pass and a lighting pass. The first writes position, albedo, and normal data to G-buffers. The second pass is responsible for collecting the lights data for the specific cluster and computing the lighting with the G-buffer information. Further optimizations could include compressing the g-buffers to reduce memory bandwidth or utlizing shared memory from moving the lighting computation to a compute pass.
 
 <img src="img/albedo.png" width="250"><img src="img/position.png" width="250"><img src="img/normal.png" width="250">
 
 ### Performance Analysis
+======================
 The baseline for my tests used a clusterWorkGroup of [4,4,4] and a clusterScale of [16, 9, 24]
 
 **Forward+ vs. Clustered Deferred**
