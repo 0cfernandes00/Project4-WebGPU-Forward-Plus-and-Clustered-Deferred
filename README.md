@@ -9,19 +9,17 @@ WebGL Forward+ and Clustered Deferred Shading
 
 ### Live Demo
 
-[![](img/thumb.png)](http://0cfernandes00.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
+[![](img/cover_image.png)](http://0cfernandes00.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
 
 ### Demo Video/GIF
 
-[![](img/video.mp4)](TODO)
+[![](img/video.mp4)]
 
-### (TODO: Your README)
+### (Naive)
+### (Forward+)
+### (Deferred)
+### (Performance Analysis)
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
-
-This assignment has a considerable amount of performance analysis compared
-to implementation work. Complete the implementation early to leave time!
 
 ### Credits
 
