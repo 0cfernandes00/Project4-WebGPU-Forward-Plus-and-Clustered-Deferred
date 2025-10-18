@@ -45,8 +45,8 @@ For this implementation, I leveraged the clustering compute shader again. The ma
 
 <img src="img/albedo.png" width="250"><img src="img/position.png" width="250"><img src="img/normal.png" width="250">
 
-### Performance Analysis
-======================
+## Performance Analysis
+
 The baseline for my tests used a clusterWorkGroup of [4,4,4] and a clusterScale of [16, 9, 24]
 
 **Forward+ vs. Clustered Deferred**
