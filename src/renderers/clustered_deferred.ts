@@ -28,6 +28,43 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
 
     fullscreen_pipeline: GPURenderPipeline;
 
+    /*
+
+    sceneTexture: GPUTexture;
+    sceneTextureView: GPUTextureView;
+
+    finalOutputTexture: GPUTexture;
+    finalOutputTextureView: GPUTextureView;
+
+    brightTexture: GPUTexture;
+    brightTextureView: GPUTextureView;
+
+    brightPipeline_BindGroupLayout: GPUBindGroupLayout;
+    bright_BindGroup: GPUBindGroup;
+
+    brightPipeline: GPUComputePipeline;
+
+    blurHorizontalTexture: GPUTexture;
+    blurHorizontalTextureView: GPUTextureView;
+
+    blurHorizontal_BindGroupLayout: GPUBindGroupLayout;
+    blurHorizontal_BindGroup: GPUBindGroup;
+
+    blurHorizontalPipeline: GPUComputePipeline;
+
+    blurVertical_BindGroupLayout: GPUBindGroupLayout;
+    blurVertical_BindGroup: GPUBindGroup;
+
+    blurVerticalPipeline: GPUComputePipeline;
+
+    blurVerticalTexture: GPUTexture;
+    blurVerticalTextureView: GPUTextureView;
+
+    compositePipeline_BindGroupLayout: GPUBindGroupLayout;
+    composite_BindGroup: GPUBindGroup;
+    compositePipeline: GPUComputePipeline;
+    */
+
     constructor(stage: Stage) {
         super(stage);
 
@@ -233,9 +270,230 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
                 ]
             }
         });
+        /*
+        const textureDesc: GPUTextureDescriptor = {
+            size: [renderer.canvas.width, renderer.canvas.height],
+            format: "rgba16float",
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
+        };
+
+        this.sceneTexture = renderer.device.createTexture(textureDesc);
+        this.sceneTextureView = this.sceneTexture.createView();
+
+        this.finalOutputTexture = renderer.device.createTexture(textureDesc);
+        this.finalOutputTextureView = this.finalOutputTexture.createView();
+
+        this.brightTexture = renderer.device.createTexture(textureDesc);
+        this.brightTextureView = this.brightTexture.createView();
+
+        this.brightPipeline_BindGroupLayout = renderer.device.createBindGroupLayout({
+            label: "brightPipeline bind group layout",
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    texture: { sampleType: "float" }  // Input: scene texture
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba16float"  // Output: bright texture
+                    }
+                }
+            ]
+        });
+
+        this.brightPipeline = renderer.device.createComputePipeline({
+            layout: renderer.device.createPipelineLayout({
+                label: "bloom pipeline layout",
+                bindGroupLayouts: [this.brightPipeline_BindGroupLayout]
+            }),
+            compute: {
+                module: renderer.device.createShaderModule({
+                    label: "bloom compute shader",
+                    code: shaders.bloomComputeSrc
+                }),
+                entryPoint: "main"
+            }
+        });
+
+        this.bright_BindGroup = renderer.device.createBindGroup({
+            label: "bloom bind group",
+            layout: this.brightPipeline_BindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.sceneTextureView  // Input
+                },
+                {
+                    binding: 1,
+                    resource: this.brightTextureView  // Output
+                }
+            ]
+        });
+
+        this.blurHorizontalTexture = renderer.device.createTexture(textureDesc);
+        this.blurHorizontalTextureView = this.blurHorizontalTexture.createView();
+
+        this.blurHorizontal_BindGroupLayout = renderer.device.createBindGroupLayout({
+            label: "blur horizontal bind group layout",
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    texture: { sampleType: "float" }  // Input: bright texture
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba16float"  // Output: blur H texture
+                    }
+                }
+            ]
+        });
+
+        this.blurHorizontalPipeline = renderer.device.createComputePipeline({
+            layout: renderer.device.createPipelineLayout({
+                label: "blur horizontal compute pipeline layout",
+                bindGroupLayouts: [this.blurHorizontal_BindGroupLayout]
+            }),
+            compute: {
+                module: renderer.device.createShaderModule({
+                    label: "blur horizontal compute shader",
+                    code: shaders.blurHSrc
+                }),
+                entryPoint: "main"
+            }
+        });
+
+        this.blurHorizontal_BindGroup = renderer.device.createBindGroup({
+            label: "blur horizontal bind group",
+            layout: this.blurHorizontal_BindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.brightTextureView  // Input
+                },
+                {
+                    binding: 1,
+                    resource: this.blurHorizontalTextureView  // Output
+                }
+            ]
+        });
 
 
+        this.blurVerticalTexture = renderer.device.createTexture(textureDesc);
+        this.blurVerticalTextureView = this.blurVerticalTexture.createView();
 
+        this.blurVertical_BindGroupLayout = renderer.device.createBindGroupLayout({
+            label: "blur vertical bind group layout",
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    texture: { sampleType: "float" }  // Input: blur H texture
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba16float"  // Output: blur V texture
+                    }
+                }
+            ]
+        });
+
+        this.blurVerticalPipeline = renderer.device.createComputePipeline({
+            layout: renderer.device.createPipelineLayout({
+                label: "blurVertical compute pipeline layout",
+                bindGroupLayouts: [this.blurVertical_BindGroupLayout]
+            }),
+            compute: {
+                module: renderer.device.createShaderModule({
+                    label: "blur vertical compute shader",
+                    code: shaders.blurVSrc
+                }),
+                entryPoint: "main"
+            }
+        });
+
+        this.blurVertical_BindGroup = renderer.device.createBindGroup({
+            label: "blurVertical bind group",
+            layout: this.blurVertical_BindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.blurHorizontalTextureView  // Input
+                },
+                {
+                    binding: 1,
+                    resource: this.blurVerticalTextureView  // Output
+                }
+            ]
+        });
+
+        this.compositePipeline_BindGroupLayout = renderer.device.createBindGroupLayout({
+            label: "composite bind group layout",
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    texture: { sampleType: "float" }  // Original scene
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    texture: { sampleType: "float" }  // Bloom result
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba16float"  // Final output
+                    }
+                }
+            ]
+        });
+
+        this.composite_BindGroup = renderer.device.createBindGroup({
+            label: "composite bind group",
+            layout: this.compositePipeline_BindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: this.sceneTextureView
+                },
+                {
+                    binding: 1,
+                    resource: this.blurVerticalTextureView
+                },
+                {
+                    binding: 2,
+                    resource: this.finalOutputTextureView  // You'll need to create this
+                }
+            ]
+        });
+
+        this.compositePipeline = renderer.device.createComputePipeline({
+            layout: renderer.device.createPipelineLayout({
+                label: "composite compute pipeline layout",
+                bindGroupLayouts: [this.compositePipeline_BindGroupLayout]
+            }),
+            compute: {
+                module: renderer.device.createShaderModule({
+                    label: "composite compute shader",
+                    code: shaders.compositeSrc
+                }),
+                entryPoint: "main"
+            }
+        });
+        */
     }
 
     override draw() {
@@ -248,10 +506,10 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
 
         this.lights.doLightClustering(encoder);
 
-
         const renderPass = encoder.beginRenderPass({
             label: "deferred render pass",
             colorAttachments: [
+               // { view: this.sceneTextureView, loadOp: "clear", storeOp: "store" },
                 { view: this.gBufferPosView, loadOp: "clear", storeOp: "store", clearValue: [0, 0, 0, 0] },
                 { view: this.gBufferAlbedoView, loadOp: "clear", storeOp: "store", clearValue: [0, 0, 0, 0] },
                 { view: this.gBufferNormalView, loadOp: "clear", storeOp: "store", clearValue: [0, 0, 0, 0] }
@@ -280,6 +538,31 @@ export class ClusteredDeferredRenderer extends renderer.Renderer {
 
         renderPass.end();
 
+        /*
+        const brightPass = encoder.beginComputePass();
+        brightPass.setPipeline(this.brightPipeline);
+        brightPass.setBindGroup(0, this.bright_BindGroup);
+        brightPass.dispatchWorkgroups(Math.ceil(renderer.canvas.width / 8), Math.ceil(renderer.canvas.height / 8));
+        brightPass.end();
+
+        const blurHPass = encoder.beginComputePass();
+        blurHPass.setPipeline(this.blurHorizontalPipeline);
+        blurHPass.setBindGroup(0, this.blurHorizontal_BindGroup);
+        blurHPass.dispatchWorkgroups(Math.ceil(renderer.canvas.width / 8), Math.ceil(renderer.canvas.height / 8));
+        blurHPass.end();
+
+        const blurVPass = encoder.beginComputePass();
+        blurVPass.setPipeline(this.blurVerticalPipeline);
+        blurVPass.setBindGroup(0, this.blurVertical_BindGroup);
+        blurVPass.dispatchWorkgroups(Math.ceil(renderer.canvas.width / 8), Math.ceil(renderer.canvas.height / 8));
+        blurVPass.end();
+
+        const compositePass = encoder.beginComputePass();
+        compositePass.setPipeline(this.compositePipeline);
+        compositePass.setBindGroup(0, this.composite_BindGroup);
+        compositePass.dispatchWorkgroups(Math.ceil(renderer.canvas.width / 8), Math.ceil(renderer.canvas.height / 8));
+        compositePass.end();
+        */
         const canvasTextureView = renderer.context.getCurrentTexture().createView();
 
         const lightingPass = encoder.beginRenderPass({
