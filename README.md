@@ -1,4 +1,4 @@
-WebGL Forward+ and Clustered Deferred Shading
+WebGL Forward+ and Clustered Deferred Shading - using 1 late day
 ======================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4**
@@ -41,7 +41,7 @@ Forward+ is an improvement to traditional forward rendering, which I have implem
 
 ### Deferred
 
-For this implementation, I leveraged the clustering compute shader again. The main workflow is separated into two passes: a geometry pass and a lighting pass. The first writes position, albedo, and normal data to G-buffers. The second pass is responsible for collecting the lights data for the specific cluster and computing the lighting with the G-buffer information. Further optimizations could include compressing the g-buffers to reduce memory bandwidth or utlizing shared memory from moving the lighting computation to a compute pass.
+For this implementation, I leveraged the clustering compute shader again. The main workflow is separated into two passes: a geometry pass and a lighting pass. The first writes position, albedo, and normal data to G-buffers. The second pass is responsible for collecting the lights data for the specific cluster and computing the lighting with the G-buffer information. Further optimizations could include compressing the g-buffers to reduce memory bandwidth or utilizing shared memory from moving the lighting computation to a compute pass.
 
 <img src="img/albedo.png" width="250"><img src="img/position.png" width="250"><img src="img/normal.png" width="250">
 
@@ -73,7 +73,7 @@ A workgroup size of [4,4,4] seemed to be the most performant for a deferred pipe
 <img src="img/WorkGroup.png" width="600">
   
 I was hoping to utilize timestamp-queries to profile but I had trouble getting it to work, I was getting errors saying my gpu was uncompatible.
-I also profiled using the extension's capture, and while it was interesting it was not a reliably consistent comparision for my purposes.
+I also profiled using the extension's capture, and while it was interesting it was not a reliably consistent comparison  for my purposes.
 
 <img src="img/naive500.png" width="400">
 
