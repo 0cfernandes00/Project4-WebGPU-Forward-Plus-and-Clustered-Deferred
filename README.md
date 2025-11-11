@@ -1,4 +1,4 @@
-WebGL Forward+ and Clustered Deferred Shading - using 1 late day
+WebGL Forward+ and Clustered Deferred Shading
 ======================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4**
